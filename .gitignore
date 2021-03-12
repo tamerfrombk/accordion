@@ -58,7 +58,8 @@ dkms.conf
 
 # End of https://www.toptal.com/developers/gitignore/api/c
 
-
 build/
 .cache/
 compile_commands.json
+
+.vscode/
