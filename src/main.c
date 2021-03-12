@@ -14,26 +14,44 @@
 
 #define PORT 8888
 
-enum MHD_Result answer_to_connection (void *cls, struct MHD_Connection *connection,
-                          const char *url,
-                          const char *method, const char *version,
-                          const char *upload_data,
-                          size_t *upload_data_size, void **con_cls)
+enum MHD_Result answer_to_connection(
+    void *cls
+    , struct MHD_Connection *connection
+    , const char *url
+    , const char *method
+    , const char *version
+    , const char *upload_data
+    , size_t *upload_data_size
+    , void **con_cls
+    )
 {
     ACC_UNUSED(cls);
     ACC_UNUSED(url);
-    ACC_UNUSED(method);
     ACC_UNUSED(version);
     ACC_UNUSED(upload_data);
     ACC_UNUSED(upload_data_size);
     ACC_UNUSED(con_cls);
 
-    const char *page  = "<html><body>Hello, browser!</body></html>";
+    debug("METHOD: %s, URL %s\n", method, url);
 
-    struct MHD_Response *response = MHD_create_response_from_buffer(strlen(page),
-                                            (void*) page, MHD_RESPMEM_PERSISTENT);
+    if (strcmp(method, "GET") != 0) {
+        return MHD_NO;
+    }
 
-    enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    if (strstr(url, "/g/") != NULL) {
+        debug("url %s redirecting to self\n", url);
+        return MHD_NO;
+    }
+
+    struct MHD_Response *response = MHD_create_response_from_buffer(
+        0
+        , NULL
+        , MHD_RESPMEM_PERSISTENT
+    );
+    
+    MHD_add_response_header(response, "Location", "https://www.google.com");
+
+    enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_MOVED_PERMANENTLY, response);
     
     MHD_destroy_response(response);
 
