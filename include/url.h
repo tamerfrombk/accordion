@@ -1,5 +1,8 @@
 #pragma once
 
-#include <stddef.h>
-
-size_t fetch_url(const char *long_url, size_t long_len, char *short_url, size_t short_len);
+typedef struct {
+    char *value;
+} url_t;
+typedef struct {
+    char *value;
+} accordion_url_t;

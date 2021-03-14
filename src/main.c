@@ -9,8 +9,8 @@
 #include <microhttpd.h>
 
 #include <def.h>
-#include <url.h>
 #include <log.h>
+#include <url_repo.h>
 
 #define PORT 8888
 
@@ -25,12 +25,15 @@ enum MHD_Result answer_to_connection(
     , void **con_cls
     )
 {
-    ACC_UNUSED(cls);
-    ACC_UNUSED(url);
     ACC_UNUSED(version);
     ACC_UNUSED(upload_data);
     ACC_UNUSED(upload_data_size);
     ACC_UNUSED(con_cls);
+
+    url_repo_t *repo = (url_repo_t *)cls;
+    if (repo == NULL) {
+        fatal("please supply the repo into MHD");
+    }
 
     debug("METHOD: %s, URL %s\n", method, url);
 
@@ -49,10 +52,15 @@ enum MHD_Result answer_to_connection(
         , MHD_RESPMEM_PERSISTENT
     );
     
-    MHD_add_response_header(response, "Location", "https://www.google.com");
+    char *accordion_url = fetch_or_create_accordion_url(repo, url);
+    if (accordion_url == NULL) {
+        fatal("unable to get accordion url\n");
+    }
+    MHD_add_response_header(response, "Location", accordion_url);
 
     enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_FOUND, response);
     
+    free(accordion_url);
     MHD_destroy_response(response);
 
     return ret;
@@ -60,13 +68,16 @@ enum MHD_Result answer_to_connection(
 
 static void start_daemon()
 {
+    url_repo_t repo;
+    url_repo_init(&repo);
+
     struct MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_INTERNAL_POLLING_THREAD
         , PORT
         , NULL
         , NULL
         , answer_to_connection
-        , NULL
+        , &repo
         , MHD_OPTION_END
     );
     
@@ -76,15 +87,24 @@ static void start_daemon()
 
     getchar();
 
+    url_repo_teardown(&repo);
     MHD_stop_daemon(daemon);
 }
 
-static void fetch_short_url(const char *url, size_t len)
+static void fetch_short_url(const char *url)
 {
-    char short_url[ACC_MINI_URL_MAX_LEN] = {0};
-    fetch_url(url, len, short_url, ACC_MINI_URL_MAX_LEN - 1);
+    url_repo_t repo;
+    url_repo_init(&repo);
 
-    puts(short_url);
+    char *accordion_url = fetch_or_create_accordion_url(&repo, url);
+    if (accordion_url == NULL) {
+        fatal("unable to get accordion url for %s\n", url);
+    }
+
+    puts(accordion_url);
+
+    url_repo_teardown(&repo);
+    free(accordion_url);
 }
 
 int main (int argc, char **argv)
@@ -92,7 +112,7 @@ int main (int argc, char **argv)
     if (argc == 1) {
         start_daemon();
     } else if (argc == 2) {
-        fetch_short_url(argv[1], strlen(argv[1]));
+        fetch_short_url(argv[1]);
     } else {
         fatal("%d arguments are not allowed", argc);
     }
