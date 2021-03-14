@@ -56,6 +56,8 @@ enum MHD_Result answer_to_connection(
     if (accordion_url == NULL) {
         fatal("unable to get accordion url\n");
     }
+    debug("accordion url for %s is '%s'\n", url, accordion_url);
+
     MHD_add_response_header(response, "Location", accordion_url);
 
     enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_FOUND, response);
