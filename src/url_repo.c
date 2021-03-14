@@ -57,9 +57,40 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
         suffix[i] = generate_random_char();
     }
 
-    const char *hostname = "scorpion";
+    const char *hostname = fetch_hostname();
+    if (hostname == NULL) {
+        error("unable to resolve hostname\n");
+        return NULL;
+    }
+
     int port = 8888;
     snprintf(accordion_url, 256, "http://%s:%d/g/%s", hostname, port, suffix);
 
+    free(hostname);
+
     return accordion_url;
+}
+
+char *fetch_hostname()
+{
+    FILE *f = fopen("/etc/hostname", "r");
+    if (f == NULL) {
+        debug("unable to open /etc/hostname\n");
+        return NULL;
+    }
+
+    char *hostname = calloc(32, sizeof(*hostname));
+    if (hostname == NULL) {
+        debug("unable to allocate hostname memory\n");
+        fclose(f);
+        return NULL;
+    }
+
+    size_t n = fread(hostname, sizeof(*hostname), 32 - 1, f);
+    fclose(f);
+    
+    hostname[n] = '\0';
+    hostname[n - 1] = '\0';
+
+    return hostname;
 }
