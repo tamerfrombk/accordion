@@ -51,7 +51,7 @@ enum MHD_Result answer_to_connection(
     
     MHD_add_response_header(response, "Location", "https://www.google.com");
 
-    enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_MOVED_PERMANENTLY, response);
+    enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_FOUND, response);
     
     MHD_destroy_response(response);
 
