@@ -1,8 +1,16 @@
 #pragma once
 
 struct FILE;
+
+typedef struct url_entry_t {
+    const char *url;
+    char *accordion_url;
+    struct url_entry_t *next;
+} url_entry_t;
+
 typedef struct  {
     FILE *connection;
+    url_entry_t *entries;
 } url_repo_t;
 
 void url_repo_init(url_repo_t *repo);

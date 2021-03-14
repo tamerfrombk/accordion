@@ -62,7 +62,6 @@ enum MHD_Result answer_to_connection(
 
     enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_FOUND, response);
     
-    free(accordion_url);
     MHD_destroy_response(response);
 
     return ret;
