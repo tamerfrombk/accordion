@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include <microhttpd.h>
 
@@ -13,6 +14,11 @@
 #include <url_repo.h>
 
 #define PORT 8888
+
+static bool is_accordion_url(const char *url)
+{
+    return strstr(url, "/g/") != NULL;
+}
 
 enum MHD_Result answer_to_connection(
     void *cls
@@ -41,8 +47,8 @@ enum MHD_Result answer_to_connection(
         return MHD_NO;
     }
 
-    if (strstr(url, "/g/") != NULL) {
-        debug("url %s redirecting to self\n", url);
+    if (!is_accordion_url(url)) {
+        error("url %s is not an accordion URL\n", url);
         return MHD_NO;
     }
 
@@ -52,16 +58,17 @@ enum MHD_Result answer_to_connection(
         , MHD_RESPMEM_PERSISTENT
     );
     
-    char *accordion_url = fetch_or_create_accordion_url(repo, url);
-    if (accordion_url == NULL) {
-        fatal("unable to get accordion url\n");
+    char *long_url = fetch_long_url(repo, url);
+    if (long_url == NULL) {
+        fatal("unable to get original long url\n");
     }
-    debug("accordion url for %s is '%s'\n", url, accordion_url);
+    debug("long url for %s is '%s'\n", url, long_url);
 
-    MHD_add_response_header(response, "Location", accordion_url);
+    MHD_add_response_header(response, "Location", long_url);
 
     enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_FOUND, response);
-    
+
+    free(long_url);    
     MHD_destroy_response(response);
 
     return ret;

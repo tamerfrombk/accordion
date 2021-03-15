@@ -94,6 +94,11 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
     return accordion_url;
 }
 
+char *fetch_long_url(url_repo_t *repo, const char *accordion_url)
+{
+    return strdup("https://www.google.com");
+}
+
 char *fetch_hostname()
 {
     FILE *f = fopen("/etc/hostname", "r");
