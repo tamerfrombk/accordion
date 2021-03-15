@@ -12,9 +12,13 @@ static char generate_random_char() {
 
 void url_repo_init(url_repo_t *repo)
 {
-    repo->connection = fopen("accordion.csv", "a+");
-    if (repo->connection == NULL) {
-        fatal("unable to initialize repo connection\n");        
+    repo->connection = redisConnect("localhost", 6379);
+    if (repo->connection == NULL || repo->connection->err) {
+        if (repo->connection) {
+            fatal("Error: %s\n", repo->connection->errstr);
+        } else {
+            fatal("Can't allocate redis context\n");
+        }
     }
 
     repo->entries = calloc(1, sizeof(*repo->entries));
@@ -25,7 +29,7 @@ void url_repo_init(url_repo_t *repo)
 
 void url_repo_teardown(url_repo_t *repo)
 {
-    fclose(repo->connection);
+    redisFree(repo->connection);
     // @TODO: free entries
 }
 
@@ -45,13 +49,28 @@ char *fetch_accordion_url(url_repo_t *repo, const char *url)
 {
     debug("fetching accordion url for %s\n", url);
 
-    for (url_entry_t *e = repo->entries; e != NULL; e = e->next) {
-        if (e->url != NULL && e->accordion_url != NULL && strcmp(e->url, url) == 0) {
-            return e->accordion_url;
-        }
+    redisReply *redis_reply = redisCommand(repo->connection, "HGET accordion %s", url);
+    if (redis_reply == NULL) {
+        error("unable to query redis for the accordion url of '%s'\n", url);
+        return NULL;
     }
-    
-    return NULL;
+
+    debug("redis reply type: %d str: %s\n", redis_reply->type, redis_reply->str);
+
+    char *reply = NULL;
+    if (redis_reply->type == REDIS_REPLY_STRING) {
+        reply = strdup(redis_reply->str);
+        if (reply == NULL) {
+            error("could not allocate memory for redis reply\n");
+        }
+    } else if (redis_reply->type == REDIS_REPLY_NIL) {
+        // no data to be found
+    } else {
+        error("unknown redis reply for %d type\n", redis_reply->type);
+    }
+    freeReplyObject(redis_reply);
+
+    return reply;
 }
 
 char *create_accordion_url(url_repo_t *repo, const char *url)
@@ -80,23 +99,27 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
 
     free(hostname);
 
-    url_entry_t *entry = calloc(1, sizeof(*entry));
-    if (entry == NULL) {
-        error("unable to acquire memory for url_entry\n");
+    redisReply *redis_reply = redisCommand(repo->connection, "HSET accordion %s %s %s %s", url, accordion_url, accordion_url, url);
+    if (redis_reply == NULL) {
+        error("unable to set accordion url for url '%s'\n", url);
         return NULL;
     }
-    entry->url = url;
-    entry->accordion_url = accordion_url;
-    
-    entry->next = repo->entries;
-    repo->entries = entry;
+
+    debug("redis reply type: %d str: %s\n", redis_reply->type, redis_reply->str);
+
+    if (redis_reply->type == REDIS_REPLY_INTEGER) {
+        debug("%d objects inserted\n", redis_reply->integer);
+    } else {
+        error("unknown redis reply for %d type\n", redis_reply->type);
+    }
+    freeReplyObject(redis_reply);
 
     return accordion_url;
 }
 
 char *fetch_long_url(url_repo_t *repo, const char *accordion_url)
 {
-    return strdup("https://www.google.com");
+    return fetch_accordion_url(repo, accordion_url);
 }
 
 char *fetch_hostname()

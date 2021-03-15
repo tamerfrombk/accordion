@@ -1,6 +1,6 @@
 #pragma once
 
-struct FILE;
+#include <hiredis/hiredis.h>
 
 typedef struct url_entry_t {
     const char *url;
@@ -9,7 +9,7 @@ typedef struct url_entry_t {
 } url_entry_t;
 
 typedef struct  {
-    FILE *connection;
+    redisContext *connection;
     url_entry_t *entries;
 } url_repo_t;
 

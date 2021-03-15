@@ -52,18 +52,18 @@ enum MHD_Result answer_to_connection(
         return MHD_NO;
     }
 
+    char *long_url = fetch_long_url(repo, url);
+    if (long_url == NULL) {
+        error("unable to get original long url\n");
+        return MHD_NO;
+    }
+    debug("long url for %s is '%s'\n", url, long_url);
+
     struct MHD_Response *response = MHD_create_response_from_buffer(
         0
         , NULL
         , MHD_RESPMEM_PERSISTENT
     );
-    
-    char *long_url = fetch_long_url(repo, url);
-    if (long_url == NULL) {
-        fatal("unable to get original long url\n");
-    }
-    debug("long url for %s is '%s'\n", url, long_url);
-
     MHD_add_response_header(response, "Location", long_url);
 
     enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_FOUND, response);
