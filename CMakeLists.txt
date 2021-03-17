@@ -11,7 +11,7 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_WARNING_FLAGS}")
 
 SET(APP_EXE accordion)
 
-ADD_EXECUTABLE(${APP_EXE} src/main.c src/url.c src/url_repo.c)
+ADD_EXECUTABLE(${APP_EXE} src/main.c src/url.c src/url_repo.c src/http_connection.c)
 
 TARGET_INCLUDE_DIRECTORIES(${APP_EXE} PRIVATE ${CMAKE_SOURCE_DIR}/include)
 TARGET_LINK_LIBRARIES(${APP_EXE} microhttpd hiredis)
