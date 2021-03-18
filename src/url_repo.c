@@ -129,7 +129,7 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
     }
 
     char suffix[ACCORDION_SUFFIX_LENGTH + 1] = {0};
-    for (unsigned int i = 0; i < ACCORDION_SUFFIX_LENGTH; ++i) {
+    for (int i = 0; i < ACCORDION_SUFFIX_LENGTH; ++i) {
         suffix[i] = generate_random_char();
     }
 
