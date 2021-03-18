@@ -1,14 +1,24 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 #include <url_repo.h>
 #include <log.h>
 
-// TODO: this is awful. Replace by reading from /dev/urandom
 static char generate_random_char() {
-    int i = rand() % 26;
+    FILE *f = fopen("/dev/urandom", "r");
+    if (f == NULL) {
+        fatal("unable to generate random character\n");
+    }
 
-    return "abcdefghijklmnopqrstuvwxyz"[i];
+    char c = '0'; // start of with a non-letter value
+    while (!isalpha(c)) {
+        debug("read %c from /dev/urandom\n", c);
+        c = fgetc(f);
+    }
+    fclose(f);
+
+    return c;
 }
 
 void url_repo_init(url_repo_t *repo)
