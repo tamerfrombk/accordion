@@ -40,6 +40,7 @@ Once you have this accordion URL, you can now navigate to it in your browser and
 
 - [ ] no `https` support for `accordion`
 - [ ] long URLs are not checked for validity and must start with the protocol (`http(s)://`)
+- [ ] only compatible with *nix systems
 
 
 
