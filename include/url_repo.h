@@ -1,10 +1,11 @@
 #pragma once
 
 #include <hiredis/hiredis.h>
+
 typedef struct  {
     redisContext *connection;           // the connection to the on-disk repository
     const char   *hostname;             // this http server's hostname
-    int port;                           // the port of this http server
+    int          port;                  // the port of this http server
 } url_repo_t;
 
 void url_repo_init(url_repo_t *repo, int port);

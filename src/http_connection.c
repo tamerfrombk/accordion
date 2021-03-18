@@ -17,6 +17,11 @@
 // maximum length of temporary buffers used within responses
 #define RESPONSE_BUFFER_SIZE (255)
 
+typedef enum http_method {
+    GET = 0,
+    POST
+} http_method;
+
 typedef struct connection_context {
     struct MHD_PostProcessor *post_processor; 
     char *long_url;
@@ -163,10 +168,12 @@ static enum MHD_Result handle_get_request(struct MHD_Connection *connection, url
     return ret;
 }
 
-enum MHD_Result iterate_headers(void *cls,
-                        enum MHD_ValueKind kind,
-                        const char *key,
-                        const char *value)
+enum MHD_Result iterate_headers(
+    void *cls
+    , enum MHD_ValueKind kind
+    , const char *key
+    , const char *value
+    )
 {
     ACC_UNUSED(cls);
     ACC_UNUSED(kind);
