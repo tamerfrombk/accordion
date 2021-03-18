@@ -115,7 +115,7 @@ static struct MHD_Response *create_accordion_url_response(url_repo_t *repo, cons
     return response;
 }
 
-static enum MHD_Result get_response(struct MHD_Connection *connection, url_repo_t *repo, const char *url)
+static enum MHD_Result handle_get_request(struct MHD_Connection *connection, url_repo_t *repo, const char *url)
 {
     debug("GET %s\n", url);
     
@@ -231,7 +231,7 @@ static void request_completed(
     *con_cls = NULL;   
 }
 
-static enum MHD_Result post_response(
+static enum MHD_Result handle_post_request(
     struct MHD_Connection *connection
     , url_repo_t *repo
     , const char *url
@@ -331,9 +331,9 @@ enum MHD_Result answer_to_connection(
     debug("METHOD: %s, URL %s\n", method, url);
 
     if (strcmp(method, "GET") == 0) {
-        return get_response(connection, repo, url);
+        return handle_get_request(connection, repo, url);
     } else if (strcmp(method, "POST") == 0) {
-        return post_response(connection, repo, url, (connection_context *)*con_cls, upload_data, upload_data_size);
+        return handle_post_request(connection, repo, url, (connection_context *)*con_cls, upload_data, upload_data_size);
     }
 
     // TODO: return not found response????
