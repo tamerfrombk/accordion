@@ -4,6 +4,7 @@
 #include <url_repo.h>
 #include <log.h>
 
+// TODO: this is awful. Replace by reading from /dev/urandom
 static char generate_random_char() {
     int i = rand() % 26;
 
@@ -12,6 +13,7 @@ static char generate_random_char() {
 
 void url_repo_init(url_repo_t *repo)
 {
+    // TODO: make this customizable
     repo->connection = redisConnect("localhost", 6379);
     if (repo->connection == NULL || repo->connection->err) {
         if (repo->connection) {
@@ -21,6 +23,7 @@ void url_repo_init(url_repo_t *repo)
         }
     }
 
+    // TODO: remove entries
     repo->entries = calloc(1, sizeof(*repo->entries));
     if (repo->entries == NULL) {
         fatal("unable to initialize entries\n");
@@ -30,7 +33,7 @@ void url_repo_init(url_repo_t *repo)
 void url_repo_teardown(url_repo_t *repo)
 {
     redisFree(repo->connection);
-    // @TODO: free entries
+    // TODO: free entries
 }
 
 char *fetch_or_create_accordion_url(url_repo_t *repo, const char *url)
@@ -119,7 +122,30 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
 
 char *fetch_long_url(url_repo_t *repo, const char *accordion_url)
 {
-    return fetch_accordion_url(repo, accordion_url);
+    debug("fetching long url for accordion URL %s\n", accordion_url);
+
+    redisReply *redis_reply = redisCommand(repo->connection, "HGET accordion %s", accordion_url);
+    if (redis_reply == NULL) {
+        error("unable to query redis for the long url of '%s'\n", accordion_url);
+        return NULL;
+    }
+
+    debug("redis reply type: %d str: %s\n", redis_reply->type, redis_reply->str);
+
+    char *reply = NULL;
+    if (redis_reply->type == REDIS_REPLY_STRING) {
+        reply = strdup(redis_reply->str);
+        if (reply == NULL) {
+            error("could not allocate memory for redis reply\n");
+        }
+    } else if (redis_reply->type == REDIS_REPLY_NIL) {
+        // no data to be found
+    } else {
+        error("unknown redis reply for %d type\n", redis_reply->type);
+    }
+    freeReplyObject(redis_reply);
+
+    return reply;
 }
 
 char *fetch_hostname()

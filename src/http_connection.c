@@ -1,3 +1,4 @@
+#include "url_repo.h"
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -15,7 +16,8 @@
 
 typedef struct connection_context {
     struct MHD_PostProcessor *postprocessor; 
-    char *answerstring;
+    char *long_url;
+    // TODO: replace with http_method
     int connectiontype;
 } connection_context;
 
@@ -37,7 +39,16 @@ static struct MHD_Response *create_entry_form_response()
 
 static struct MHD_Response *create_long_url_response(url_repo_t *repo, const char *url)
 {
-    char *long_url = fetch_long_url(repo, url);
+    char *hostname =  fetch_hostname();
+    if (hostname == NULL) {
+        fatal("unable to get hostname\n");
+    }
+
+    char net_name[255] = {0};
+    // TODO: customize port
+    snprintf(net_name, sizeof(net_name), "http://%s:%d%s", hostname, 8888, url);
+
+    char *long_url = fetch_long_url(repo, net_name);
     if (long_url == NULL) {
         error("unable to get original long url\n");
         return NULL;
@@ -54,27 +65,6 @@ static struct MHD_Response *create_long_url_response(url_repo_t *repo, const cha
     free(long_url);
 
     return response;
-}
-
-static struct MHD_Response *create_accordion_url_response(url_repo_t *repo, const char *url)
-{
-    char *accordion_url = fetch_or_create_accordion_url(repo, url);
-    if (accordion_url == NULL) {
-        error("unable to get accordion url for %s\n", url);
-        return NULL;
-    }
-    debug("accordion url for %s is %s\n", url, accordion_url);
-
-    char page[256] = {0};
-    snprintf(page, sizeof(page), "<html><body><p>AccordionURL: %s</p></body></html>", accordion_url);
-
-    free(accordion_url);
-
-    return MHD_create_response_from_buffer(
-        strlen(page)
-        , page
-        , MHD_RESPMEM_PERSISTENT
-    );
 }
 
 static enum MHD_Result get_response(struct MHD_Connection *connection, url_repo_t *repo, const char *url)
@@ -144,16 +134,17 @@ static enum MHD_Result iterate_post(
 
     if (strcmp(key, "long_url") == 0) {
         debug("long_url received in POST: %s\n", data);
+        // TODO: realloc cctx->long_url when there are multiple posts with data
         if (size > 0) {
             char *long_url = strdup(data);
             if (long_url == NULL) {
                 error("unable to allocate memory for incoming POST data long_url\n");
                 return MHD_NO;
             }
-            cctx->answerstring = long_url;
-            debug("answer string: %s\n", cctx->answerstring);
+            cctx->long_url = long_url;
+            debug("answer string: %s\n", cctx->long_url);
         } else {
-            cctx->answerstring = NULL;
+            cctx->long_url = NULL;
         }
 
         // done processing
@@ -182,8 +173,8 @@ static void request_completed(
 
     if (cctx->connectiontype == POST) {
         MHD_destroy_post_processor(cctx->postprocessor);        
-        if (cctx->answerstring != NULL) {
-            free (cctx->answerstring);
+        if (cctx->long_url != NULL) {
+            free (cctx->long_url);
         }
     }
 
@@ -207,6 +198,7 @@ static enum MHD_Result post_response(
     // create accordion url
     // return accordion url in a <p> response??
 
+    // TODO: generate NOT_FOUND error response
     if (strcmp(url, "/") != 0) {
         error("URL %s does not have a response handler for POST method\n", url);
         return MHD_NO;
@@ -221,10 +213,18 @@ static enum MHD_Result post_response(
 
         return MHD_YES;
     }
+
+    char *accordion_url = fetch_or_create_accordion_url(repo, cctx->long_url);
+    if (accordion_url == NULL) {
+        // TODO: internal server error response?
+        error("unable to fetch the accordion URL for URL %s\n", cctx->long_url);
+        return MHD_NO;
+    }
     
-    const char *ok = "<html><head></head><body><h1>OK %s</h1></body></html>";
+    const char *ok = "<html><head></head><body><h1>Accordion URL: %s</h1></body></html>";
     char buf[255] = {0};
-    snprintf(buf, sizeof(buf), ok, cctx->answerstring);
+    snprintf(buf, sizeof(buf), ok, accordion_url);
+
     debug("POST answer: %s\n", buf);
 
     struct MHD_Response *response = MHD_create_response_from_buffer(strlen(buf), buf, MHD_RESPMEM_MUST_COPY);
