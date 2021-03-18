@@ -15,10 +15,9 @@
 #include <http_connection.h>
 
 typedef struct connection_context {
-    struct MHD_PostProcessor *postprocessor; 
+    struct MHD_PostProcessor *post_processor; 
     char *long_url;
-    // TODO: replace with http_method
-    int connectiontype;
+    http_method connection_type;
 } connection_context;
 
 static bool is_accordion_url(const char *url)
@@ -170,8 +169,8 @@ static void request_completed(
         return;
     }
 
-    if (cctx->connectiontype == POST) {
-        MHD_destroy_post_processor(cctx->postprocessor);        
+    if (cctx->connection_type == POST) {
+        MHD_destroy_post_processor(cctx->post_processor);        
         if (cctx->long_url != NULL) {
             free (cctx->long_url);
         }
@@ -205,7 +204,7 @@ static enum MHD_Result post_response(
 
     debug("upload_data_size %d\n", *upload_data_size);
     if (*upload_data_size > 0) {
-        MHD_post_process(cctx->postprocessor, upload_data, *upload_data_size);
+        MHD_post_process(cctx->post_processor, upload_data, *upload_data_size);
         // this indicates that there is no more data to process
         // we're currently assuming there is only one request made per connection
         *upload_data_size = 0;
@@ -248,15 +247,15 @@ enum MHD_Result setup_request_specific_context(struct MHD_Connection *connection
     }
 
     if (strcmp(method, "POST") == 0) {
-        cctx->postprocessor = MHD_create_post_processor(connection, 4 * 1024, iterate_post, cctx);
-        if (cctx->postprocessor == NULL) {
+        cctx->post_processor = MHD_create_post_processor(connection, 4 * 1024, iterate_post, cctx);
+        if (cctx->post_processor == NULL) {
             error("unable to allocate memory for request postprocessor\n");
             free(cctx);
             return MHD_NO;
         }
-        cctx->connectiontype = POST;
+        cctx->connection_type = POST;
     } else {
-        cctx->connectiontype = GET;
+        cctx->connection_type = GET;
     }
 
     *shared_connection_data = cctx;
