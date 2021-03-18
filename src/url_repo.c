@@ -25,7 +25,7 @@ void url_repo_init(url_repo_t *repo, int port)
 {
     repo->port = port;
 
-    // TODO: make this customizable
+    // TODO: make redis connection credentials customizable
     repo->connection = redisConnect("localhost", 6379);
     if (repo->connection == NULL) {
         fatal("unable to connect to redis on %s:%d\n", "localhost", 6379);
