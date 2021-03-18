@@ -390,7 +390,6 @@ void start_http_daemon(url_repo_t *repo)
         fatal("unable to start the HTTP daemon");
     } 
 
-    // TODO: replace with SIGTERM signal handler to gracefully exit
     getchar();
 
     MHD_stop_daemon(daemon);
