@@ -11,11 +11,11 @@ static char generate_random_char() {
         fatal("unable to generate random character\n");
     }
 
-    char c = '0'; // start off with a non-letter value
-    while (!isalpha(c)) {
-        debug("read %c from /dev/urandom\n", c);
+    char c;
+    do {
         c = fgetc(f);
-    }
+    } while (!isalpha(c));
+
     fclose(f);
 
     return c;
@@ -98,6 +98,7 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
     char *hostname = fetch_hostname();
     if (hostname == NULL) {
         error("unable to resolve hostname\n");
+        free(accordion_url);
         return NULL;
     }
 
@@ -105,7 +106,7 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
 
     free(hostname);
 
-    redisReply *redis_reply = redisCommand(repo->connection, "HSET accordion %s %s %s %s", url, accordion_url, accordion_url, url);
+    redisReply *redis_reply = redisCommand(repo->connection, "HSET accordion %s %s %s %s", url, suffix, suffix, url);
     if (redis_reply == NULL) {
         error("unable to set accordion url for url '%s'\n", url);
         return NULL;

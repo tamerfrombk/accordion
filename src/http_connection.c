@@ -10,9 +10,9 @@
 
 #include <microhttpd.h>
 
+#include <http_connection.h>
 #include <def.h>
 #include <log.h>
-#include <http_connection.h>
 
 typedef struct connection_context {
     struct MHD_PostProcessor *post_processor; 
@@ -70,15 +70,8 @@ static struct MHD_Response *create_entry_form_response()
 
 static struct MHD_Response *create_long_url_response(url_repo_t *repo, const char *url)
 {
-    char *hostname = fetch_hostname();
-    if (hostname == NULL) {
-        fatal("unable to get hostname\n");
-    }
-
-    char net_name[255] = {0};
-    snprintf(net_name, sizeof(net_name), "http://%s:%d%s", hostname, repo->port, url);
-
-    char *long_url = fetch_long_url(repo, net_name);
+    // skip the /g/
+    char *long_url = fetch_long_url(repo, url + 3);
     if (long_url == NULL) {
         error("unable to get original long url\n");
         return NULL;
@@ -88,7 +81,7 @@ static struct MHD_Response *create_long_url_response(url_repo_t *repo, const cha
     struct MHD_Response *response = MHD_create_response_from_buffer(
         0
         , NULL
-        , MHD_RESPMEM_PERSISTENT
+        , MHD_RESPMEM_MUST_COPY
     );
     if (response == NULL) {
         return NULL;
@@ -111,7 +104,6 @@ static struct MHD_Response *create_accordion_url_response(url_repo_t *repo, cons
     
     char buf[255] = {0};
     snprintf(buf, sizeof(buf), ACCORDION_URL_RESPONSE_HTML_TEMPLATE, accordion_url);
-
     free(accordion_url);
 
     debug("POST answer: %s\n", buf);
