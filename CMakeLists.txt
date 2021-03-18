@@ -6,7 +6,7 @@ SET(CMAKE_C_STANDARD_REQUIRED ON)
 SET(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 # @PLATFORM: this works with Clang/GCC but will be an issue with MSVC
-SET(CMAKE_C_WARNING_FLAGS "-Wall -Wextra -Wpedantic -Wpadded")
+SET(CMAKE_C_WARNING_FLAGS "-Wall -Wextra -Wpedantic")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_WARNING_FLAGS}")
 
 SET(APP_EXE accordion)
