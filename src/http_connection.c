@@ -176,6 +176,11 @@ enum MHD_Result iterate_headers(void *cls,
 {
     ACC_UNUSED(cls);
     ACC_UNUSED(kind);
+    
+    // these are here because, on release builds, the debug() call
+    // gets optimized away and these parameters end up unused
+    ACC_UNUSED(key);
+    ACC_UNUSED(value);
 
     debug("Header: %s : Value: %s\n", key, value);
 
