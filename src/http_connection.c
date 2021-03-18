@@ -14,6 +14,8 @@
 #include <def.h>
 #include <log.h>
 
+// maximum length of temporary buffers used within responses
+#define RESPONSE_BUFFER_SIZE (255)
 typedef struct connection_context {
     struct MHD_PostProcessor *post_processor; 
     char *long_url;
@@ -70,8 +72,7 @@ static struct MHD_Response *create_entry_form_response()
 
 static struct MHD_Response *create_long_url_response(url_repo_t *repo, const char *url)
 {
-    // skip the /g/
-    char *long_url = fetch_long_url(repo, url + 3);
+    char *long_url = fetch_long_url(repo, url + strlen("/g/"));
     if (long_url == NULL) {
         error("unable to get original long url\n");
         return NULL;
@@ -102,8 +103,8 @@ static struct MHD_Response *create_accordion_url_response(url_repo_t *repo, cons
         return NULL;
     }
     
-    char buf[255] = {0};
-    snprintf(buf, sizeof(buf), ACCORDION_URL_RESPONSE_HTML_TEMPLATE, accordion_url);
+    char buf[RESPONSE_BUFFER_SIZE + 1] = {0};
+    snprintf(buf, RESPONSE_BUFFER_SIZE, ACCORDION_URL_RESPONSE_HTML_TEMPLATE, accordion_url);
     free(accordion_url);
 
     debug("POST answer: %s\n", buf);
@@ -119,8 +120,8 @@ static struct MHD_Response *create_accordion_url_response(url_repo_t *repo, cons
 
 static enum MHD_Result handle_method_not_allowed(struct MHD_Connection *connection, const char *method, const char *url)
 {
-    char buf[255] = {0};
-    snprintf(buf, sizeof(buf), METHOD_NOT_ALLOWED_HTML_TEMPLATE, method, url);
+    char buf[RESPONSE_BUFFER_SIZE + 1] = {0};
+    snprintf(buf, RESPONSE_BUFFER_SIZE, METHOD_NOT_ALLOWED_HTML_TEMPLATE, method, url);
 
     struct MHD_Response *response = MHD_create_response_from_buffer(
         strlen(buf)
