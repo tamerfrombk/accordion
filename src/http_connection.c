@@ -44,6 +44,16 @@ static const char *const ACCORDION_URL_RESPONSE_HTML_TEMPLATE = "<html>\
     </body>\
 </html>";
 
+static const char *const METHOD_NOT_ALLOWED_HTML_TEMPLATE = "<html>\
+    <head>\
+        <title>Accordion URL</title>\
+        <meta charset=\"UTF-8\">\
+    </head>\
+    <body>\
+        <h1>HTTP method %s is not allowed on %s.</h1>\
+    </body>\
+</html>";
+
 static bool is_accordion_url(const char *url)
 {
     return strstr(url, "/g/") != NULL;
@@ -60,7 +70,7 @@ static struct MHD_Response *create_entry_form_response()
 
 static struct MHD_Response *create_long_url_response(url_repo_t *repo, const char *url)
 {
-    char *hostname =  fetch_hostname();
+    char *hostname = fetch_hostname();
     if (hostname == NULL) {
         fatal("unable to get hostname\n");
     }
@@ -113,6 +123,27 @@ static struct MHD_Response *create_accordion_url_response(url_repo_t *repo, cons
     MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE, "text/html");
 
     return response;
+}
+
+static enum MHD_Result handle_method_not_allowed(struct MHD_Connection *connection, const char *method, const char *url)
+{
+    char buf[255] = {0};
+    snprintf(buf, sizeof(buf), METHOD_NOT_ALLOWED_HTML_TEMPLATE, method, url);
+
+    struct MHD_Response *response = MHD_create_response_from_buffer(
+        strlen(buf)
+        , buf
+        , MHD_RESPMEM_MUST_COPY
+    );
+    if (response == NULL) {
+        error("unable to generate method not found response to method %s on URL %s\n", method, url);
+        return MHD_NO;
+    }
+
+    enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_METHOD_NOT_ALLOWED, response);
+    MHD_destroy_response(response);
+    
+    return ret;
 }
 
 static enum MHD_Result handle_get_request(struct MHD_Connection *connection, url_repo_t *repo, const char *url)
@@ -334,10 +365,9 @@ enum MHD_Result answer_to_connection(
         return handle_get_request(connection, repo, url);
     } else if (strcmp(method, "POST") == 0) {
         return handle_post_request(connection, repo, url, (connection_context *)*con_cls, upload_data, upload_data_size);
+    } else {
+        return handle_method_not_allowed(connection, method, url);
     }
-
-    // TODO: return not found response????
-    return MHD_NO;
 }
 
 void start_http_daemon(url_repo_t *repo)
