@@ -20,6 +20,30 @@ typedef struct connection_context {
     http_method connection_type;
 } connection_context;
 
+static const char *const URL_ENTRY_FORM_HTML = "<html>\
+  <head>\
+    <title>Accordion URL</title>\
+    <meta charset=\"UTF-8\">\
+  </head>\
+  <body>\
+    <form action=\"/\" method=\"post\">\
+      <label for=\"long_url\">Enter your URL:</label><br>\
+      <input type=\"text\" id=\"long_url\" name=\"long_url\" value=\"https://www.duckduckgo.com\"><br>\
+      <input type=\"submit\" value=\"Submit\">\
+    </form>\
+  </body>\
+</html>";
+
+static const char *const ACCORDION_URL_RESPONSE_HTML_TEMPLATE = "<html>\
+    <head>\
+        <title>Accordion URL</title>\
+        <meta charset=\"UTF-8\">\
+    </head>\
+    <body>\
+        <h1>Accordion URL: %s</h1>\
+    </body>\
+</html>";
+
 static bool is_accordion_url(const char *url)
 {
     return strstr(url, "/g/") != NULL;
@@ -27,11 +51,9 @@ static bool is_accordion_url(const char *url)
 
 static struct MHD_Response *create_entry_form_response()
 {
-    const char *form = "<html><head></head><body><h2>HTML Forms</h2><form action=\"/\" method=\"POST\"><label for=\"long_url\">Enter your URL:</label><br><input type=\"text\" id=\"long_url\" name=\"long_url\" value=\"https://www.duckduckgo.com\"><br><input type=\"submit\" value=\"Submit\"></form></body></html>";
-
     return MHD_create_response_from_buffer(
-        strlen(form)
-        , (void *) form
+        strlen(URL_ENTRY_FORM_HTML)
+        , (void *) URL_ENTRY_FORM_HTML
         , MHD_RESPMEM_PERSISTENT
     );
 }
@@ -58,9 +80,37 @@ static struct MHD_Response *create_long_url_response(url_repo_t *repo, const cha
         , NULL
         , MHD_RESPMEM_PERSISTENT
     );
+    if (response == NULL) {
+        return NULL;
+    }
     MHD_add_response_header(response, MHD_HTTP_HEADER_LOCATION, long_url);
 
     free(long_url);
+
+    return response;
+}
+
+static struct MHD_Response *create_accordion_url_response(url_repo_t *repo, const char *long_url)
+{
+    char *accordion_url = fetch_or_create_accordion_url(repo, long_url);
+    if (accordion_url == NULL) {
+        // TODO: internal server error response?
+        error("unable to fetch the accordion URL for URL %s\n", long_url);
+        return NULL;
+    }
+    
+    char buf[255] = {0};
+    snprintf(buf, sizeof(buf), ACCORDION_URL_RESPONSE_HTML_TEMPLATE, accordion_url);
+
+    free(accordion_url);
+
+    debug("POST answer: %s\n", buf);
+
+    struct MHD_Response *response = MHD_create_response_from_buffer(strlen(buf), buf, MHD_RESPMEM_MUST_COPY);
+    if (response == NULL) {
+        return NULL;
+    }
+    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE, "text/html");
 
     return response;
 }
@@ -149,7 +199,8 @@ static enum MHD_Result iterate_post(
         return MHD_NO;
     }
 
-    return MHD_YES; // continue processing
+    // continue processing
+    return MHD_YES;
 }
 
 static void request_completed(
@@ -191,11 +242,6 @@ static enum MHD_Result post_response(
 {
     debug("POST %s\n", url);
 
-    // fetch body
-    // parse out long url
-    // create accordion url
-    // return accordion url in a <p> response??
-
     // TODO: generate NOT_FOUND error response
     if (strcmp(url, "/") != 0) {
         error("URL %s does not have a response handler for POST method\n", url);
@@ -212,25 +258,11 @@ static enum MHD_Result post_response(
         return MHD_YES;
     }
 
-    char *accordion_url = fetch_or_create_accordion_url(repo, cctx->long_url);
-    if (accordion_url == NULL) {
-        // TODO: internal server error response?
-        error("unable to fetch the accordion URL for URL %s\n", cctx->long_url);
-        return MHD_NO;
-    }
-    
-    const char *ok = "<html><head></head><body><h1>Accordion URL: %s</h1></body></html>";
-    char buf[255] = {0};
-    snprintf(buf, sizeof(buf), ok, accordion_url);
-
-    debug("POST answer: %s\n", buf);
-
-    struct MHD_Response *response = MHD_create_response_from_buffer(strlen(buf), buf, MHD_RESPMEM_MUST_COPY);
+    struct MHD_Response *response = create_accordion_url_response(repo, cctx->long_url);
     if (response == NULL) {
-        error("unable to create HTTP POST response for %s\n", url);
+        error("unable to create POST response to URL %s\n", cctx->long_url);
         return MHD_NO;
     }
-    MHD_add_response_header(response, MHD_HTTP_HEADER_CONTENT_TYPE, "text/html");
 
     enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
     MHD_destroy_response(response);
@@ -276,7 +308,7 @@ enum MHD_Result answer_to_connection(
 {
     ACC_UNUSED(version);
 
-    url_repo_t *repo = (url_repo_t *)cls;
+    url_repo_t *repo = cls;
     if (repo == NULL) {
         fatal("please supply the repo into MHD\n");
     }
