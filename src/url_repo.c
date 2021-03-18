@@ -80,17 +80,27 @@ void url_repo_teardown(url_repo_t *repo)
 
 char *fetch_or_create_accordion_url(url_repo_t *repo, const char *url)
 {
-    char *accordion_url = fetch_accordion_url(repo, url);
+    char *accordion_url = fetch_accordion_suffix(repo, url);
     if (accordion_url == NULL) {
         debug("unable to fetch accordion url for %s\n", url);
 
-        return create_accordion_url(repo, url);
+        accordion_url = create_accordion_suffix(repo, url);
+        if (accordion_url == NULL) {
+            debug("unable to create accordion url for %s\n", url);
+            return NULL;
+        }
     }
 
-    return accordion_url;
+    char *buf = calloc(ACCORDION_URL_LENGTH + 1, sizeof(*buf));
+    if (buf == NULL) {
+        fatal("cannot allocate memory for accordion url buffer\n");
+    }
+    snprintf(buf, ACCORDION_URL_LENGTH, "http://%s:%d/g/%s", repo->hostname, repo->port, accordion_url);
+
+    return buf;
 }
 
-char *fetch_accordion_url(url_repo_t *repo, const char *url)
+char *fetch_accordion_suffix(url_repo_t *repo, const char *url)
 {
     debug("fetching accordion url for %s\n", url);
 
@@ -118,26 +128,23 @@ char *fetch_accordion_url(url_repo_t *repo, const char *url)
     return reply;
 }
 
-char *create_accordion_url(url_repo_t *repo, const char *url)
+char *create_accordion_suffix(url_repo_t *repo, const char *url)
 {
     debug("creating accordion url for %s\n", url);
 
-    char *accordion_url = calloc(ACCORDION_URL_LENGTH + 1, sizeof(*accordion_url));
-    if (accordion_url == NULL) {
-        error("unable to acquire memory for accordion_url");
-        return NULL;
+    char *suffix = calloc(ACCORDION_SUFFIX_LENGTH + 1, sizeof(*suffix));
+    if (suffix == NULL) {
+        fatal("unable to allocate memory for accordion suffix\n");
     }
 
-    char suffix[ACCORDION_SUFFIX_LENGTH + 1] = {0};
     for (int i = 0; i < ACCORDION_SUFFIX_LENGTH; ++i) {
         suffix[i] = generate_random_char();
     }
 
-    snprintf(accordion_url, ACCORDION_URL_LENGTH, "http://%s:%d/g/%s", repo->hostname, repo->port, suffix);
-
     redisReply *redis_reply = redisCommand(repo->connection, "HSET accordion %s %s %s %s", url, suffix, suffix, url);
     if (redis_reply == NULL) {
         error("unable to set accordion url for url '%s'\n", url);
+        free(suffix);
         return NULL;
     }
 
@@ -150,7 +157,7 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
     }
     freeReplyObject(redis_reply);
 
-    return accordion_url;
+    return suffix;
 }
 
 char *fetch_long_url(url_repo_t *repo, const char *accordion_url)
