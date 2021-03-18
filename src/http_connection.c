@@ -1,4 +1,3 @@
-#include "url_repo.h"
 #include <sys/types.h>
 #include <sys/select.h>
 #include <sys/socket.h>
@@ -10,12 +9,14 @@
 
 #include <microhttpd.h>
 
+#include "url_repo.h"
 #include <http_connection.h>
 #include <def.h>
 #include <log.h>
 
 // maximum length of temporary buffers used within responses
 #define RESPONSE_BUFFER_SIZE (255)
+
 typedef struct connection_context {
     struct MHD_PostProcessor *post_processor; 
     char *long_url;
