@@ -1,6 +1,8 @@
 # accordion
 
 `accordion` is a URL shortener that works in a similar fashion to `TinyURL`.
+
+`accordion` is written for fun and for educational purposes only. __Please do not use `accordion` in a production setting!__ Typical features present in production `HTTP` servers like `https` support are not implemented!
 ### Dependencies
 
 * [libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/)
@@ -33,6 +35,12 @@ Once you submit, `accordion` will generate a minified URL (called the `accordion
 ![img](rsc/img/accordion_url.png)
 
 Once you have this accordion URL, you can now navigate to it and `accordion` will redirect you back to the orginal URL you entered :) In this case, that's `DuckDuckGo`.
+
+### Limitations
+
+- [ ] no `https` support for `accordion`
+- [ ] long URLs are not checked for validity and must start with the protocol (`http(s)://`)
+
 
 
 
