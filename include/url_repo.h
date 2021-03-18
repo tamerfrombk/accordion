@@ -2,10 +2,11 @@
 
 #include <hiredis/hiredis.h>
 typedef struct  {
-    redisContext *connection;
+    redisContext *connection;           // the connection to the on-disk repository
+    int port;                           // the port of this http server
 } url_repo_t;
 
-void url_repo_init(url_repo_t *repo);
+void url_repo_init(url_repo_t *repo, int port);
 void url_repo_teardown(url_repo_t *repo);
 
 char *fetch_or_create_accordion_url(url_repo_t *repo, const char *url);

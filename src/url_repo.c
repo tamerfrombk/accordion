@@ -11,7 +11,7 @@ static char generate_random_char() {
         fatal("unable to generate random character\n");
     }
 
-    char c = '0'; // start of with a non-letter value
+    char c = '0'; // start off with a non-letter value
     while (!isalpha(c)) {
         debug("read %c from /dev/urandom\n", c);
         c = fgetc(f);
@@ -21,16 +21,17 @@ static char generate_random_char() {
     return c;
 }
 
-void url_repo_init(url_repo_t *repo)
+void url_repo_init(url_repo_t *repo, int port)
 {
+    repo->port = port;
+
     // TODO: make this customizable
     repo->connection = redisConnect("localhost", 6379);
-    if (repo->connection == NULL || repo->connection->err) {
-        if (repo->connection) {
-            fatal("Error: %s\n", repo->connection->errstr);
-        } else {
-            fatal("Can't allocate redis context\n");
-        }
+    if (repo->connection == NULL) {
+        fatal("unable to connect to redis on %s:%d\n", "localhost", 6379);
+    }
+    if (repo->connection->err != 0) {
+        fatal("error while connection to redis: %s\n", repo->connection->errstr);
     }
 }
 
@@ -100,8 +101,7 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
         return NULL;
     }
 
-    int port = 8888;
-    snprintf(accordion_url, 256, "http://%s:%d/g/%s", hostname, port, suffix);
+    snprintf(accordion_url, 256, "http://%s:%d/g/%s", hostname, repo->port, suffix);
 
     free(hostname);
 

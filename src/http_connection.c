@@ -45,8 +45,7 @@ static struct MHD_Response *create_long_url_response(url_repo_t *repo, const cha
     }
 
     char net_name[255] = {0};
-    // TODO: customize port
-    snprintf(net_name, sizeof(net_name), "http://%s:%d%s", hostname, 8888, url);
+    snprintf(net_name, sizeof(net_name), "http://%s:%d%s", hostname, repo->port, url);
 
     char *long_url = fetch_long_url(repo, net_name);
     if (long_url == NULL) {
@@ -312,9 +311,11 @@ enum MHD_Result answer_to_connection(
 
 void start_http_daemon(url_repo_t *repo)
 {
+    debug("starting http daemon on port %d\n", repo->port);
+
     struct MHD_Daemon *daemon = MHD_start_daemon(
         MHD_USE_INTERNAL_POLLING_THREAD
-        , 8888 // TODO: add a way to customize this
+        , repo->port
         , NULL
         , NULL
         , answer_to_connection
@@ -324,7 +325,6 @@ void start_http_daemon(url_repo_t *repo)
         , NULL
         , MHD_OPTION_END
     );
-    
     if (daemon == NULL) {
         fatal("unable to start the HTTP daemon");
     } 

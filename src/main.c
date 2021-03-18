@@ -1,32 +1,37 @@
+#include <stdlib.h>
+
 #include <http_connection.h>
 
 #include <log.h>
 #include <url_repo.h>
 
-static void fetch_short_url(url_repo_t *repo, const char *url)
+static int parse_int(const char *str)
 {
-    char *accordion_url = fetch_or_create_accordion_url(repo, url);
-    if (accordion_url == NULL) {
-        fatal("unable to get accordion url for %s\n", url);
+    char *end = NULL;
+
+    long port = strtol(str, &end, 10);
+    if (*end != '\0') {
+        fatal("%s is not a valid integer\n", str);
     }
 
-    puts(accordion_url);
-
-    free(accordion_url);
+    return (int) port;
 }
 
 int main (int argc, char **argv)
 {
     url_repo_t repo;
-    url_repo_init(&repo);
 
+    int port;
     if (argc == 1) {
-        start_http_daemon(&repo);
+        port = 8888;
     } else if (argc == 2) {
-        fetch_short_url(&repo, argv[1]);
+        port = parse_int(argv[1]);
     } else {
         fatal("%d arguments are not allowed", argc);
     }
+    url_repo_init(&repo, port);
+    
+    start_http_daemon(&repo);
     
     url_repo_teardown(&repo);
 }
