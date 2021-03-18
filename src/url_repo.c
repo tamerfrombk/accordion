@@ -8,6 +8,12 @@
 // the maximum length of the hostname string
 #define HOSTNAME_LENGTH (32)
 
+// the maximum length of the accordion URL
+#define ACCORDION_URL_LENGTH (255)
+
+// the length of the accordion suffix alias
+#define ACCORDION_SUFFIX_LENGTH (10)
+
 static char generate_random_char() {
     FILE *f = fopen("/dev/urandom", "r");
     if (f == NULL) {
@@ -100,7 +106,7 @@ char *fetch_accordion_url(url_repo_t *repo, const char *url)
     if (redis_reply->type == REDIS_REPLY_STRING) {
         reply = strdup(redis_reply->str);
         if (reply == NULL) {
-            error("could not allocate memory for redis reply\n");
+            fatal("could not allocate memory for redis reply\n");
         }
     } else if (redis_reply->type == REDIS_REPLY_NIL) {
         // no data to be found
@@ -116,18 +122,18 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
 {
     debug("creating accordion url for %s\n", url);
 
-    char *accordion_url = calloc(256, sizeof(*accordion_url));
+    char *accordion_url = calloc(ACCORDION_URL_LENGTH + 1, sizeof(*accordion_url));
     if (accordion_url == NULL) {
         error("unable to acquire memory for accordion_url");
         return NULL;
     }
 
-    char suffix[10] = {0};
-    for (unsigned int i = 0; i < sizeof(suffix) - 1; ++i) {
+    char suffix[ACCORDION_SUFFIX_LENGTH + 1] = {0};
+    for (unsigned int i = 0; i < ACCORDION_SUFFIX_LENGTH; ++i) {
         suffix[i] = generate_random_char();
     }
 
-    snprintf(accordion_url, 256, "http://%s:%d/g/%s", repo->hostname, repo->port, suffix);
+    snprintf(accordion_url, ACCORDION_URL_LENGTH, "http://%s:%d/g/%s", repo->hostname, repo->port, suffix);
 
     redisReply *redis_reply = redisCommand(repo->connection, "HSET accordion %s %s %s %s", url, suffix, suffix, url);
     if (redis_reply == NULL) {
@@ -163,7 +169,7 @@ char *fetch_long_url(url_repo_t *repo, const char *accordion_url)
     if (redis_reply->type == REDIS_REPLY_STRING) {
         reply = strdup(redis_reply->str);
         if (reply == NULL) {
-            error("could not allocate memory for redis reply\n");
+            fatal("could not allocate memory for redis reply\n");
         }
     } else if (redis_reply->type == REDIS_REPLY_NIL) {
         // no data to be found
