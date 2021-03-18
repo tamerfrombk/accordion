@@ -32,18 +32,11 @@ void url_repo_init(url_repo_t *repo)
             fatal("Can't allocate redis context\n");
         }
     }
-
-    // TODO: remove entries
-    repo->entries = calloc(1, sizeof(*repo->entries));
-    if (repo->entries == NULL) {
-        fatal("unable to initialize entries\n");
-    }
 }
 
 void url_repo_teardown(url_repo_t *repo)
 {
     redisFree(repo->connection);
-    // TODO: free entries
 }
 
 char *fetch_or_create_accordion_url(url_repo_t *repo, const char *url)
