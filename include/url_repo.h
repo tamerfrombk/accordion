@@ -3,6 +3,7 @@
 #include <hiredis/hiredis.h>
 typedef struct  {
     redisContext *connection;           // the connection to the on-disk repository
+    const char   *hostname;             // this http server's hostname
     int port;                           // the port of this http server
 } url_repo_t;
 
@@ -14,5 +15,3 @@ char *fetch_accordion_url(url_repo_t *repo, const char *url);
 char *create_accordion_url(url_repo_t *repo, const char *url);
 
 char *fetch_long_url(url_repo_t *repo, const char *accordion_url);
-
-char *fetch_hostname();

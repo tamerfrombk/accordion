@@ -5,6 +5,9 @@
 #include <url_repo.h>
 #include <log.h>
 
+// the maximum length of the hostname string
+#define HOSTNAME_LENGTH (32)
+
 static char generate_random_char() {
     FILE *f = fopen("/dev/urandom", "r");
     if (f == NULL) {
@@ -21,8 +24,36 @@ static char generate_random_char() {
     return c;
 }
 
+const char *fetch_hostname()
+{
+    FILE *f = fopen("/etc/hostname", "r");
+    if (f == NULL) {
+        error("unable to open /etc/hostname\n");
+        return NULL;
+    }
+
+    char *hostname = calloc(HOSTNAME_LENGTH + 1, sizeof(*hostname));
+    if (hostname == NULL) {
+        error("unable to allocate hostname memory\n");
+        fclose(f);
+        return NULL;
+    }
+
+    size_t hostname_length = fread(hostname, sizeof(*hostname), HOSTNAME_LENGTH, f);
+    fclose(f);
+
+    // remove the trailing newline
+    hostname[hostname_length - 1] = '\0';
+
+    return hostname;
+}
+
 void url_repo_init(url_repo_t *repo, int port)
 {
+    repo->hostname = fetch_hostname();
+    if (repo->hostname == NULL) {
+        fatal("unable to determine hostname\n");
+    }
     repo->port = port;
 
     // TODO: make redis connection credentials customizable
@@ -38,6 +69,7 @@ void url_repo_init(url_repo_t *repo, int port)
 void url_repo_teardown(url_repo_t *repo)
 {
     redisFree(repo->connection);
+    free((void*)repo->hostname);
 }
 
 char *fetch_or_create_accordion_url(url_repo_t *repo, const char *url)
@@ -95,16 +127,7 @@ char *create_accordion_url(url_repo_t *repo, const char *url)
         suffix[i] = generate_random_char();
     }
 
-    char *hostname = fetch_hostname();
-    if (hostname == NULL) {
-        error("unable to resolve hostname\n");
-        free(accordion_url);
-        return NULL;
-    }
-
-    snprintf(accordion_url, 256, "http://%s:%d/g/%s", hostname, repo->port, suffix);
-
-    free(hostname);
+    snprintf(accordion_url, 256, "http://%s:%d/g/%s", repo->hostname, repo->port, suffix);
 
     redisReply *redis_reply = redisCommand(repo->connection, "HSET accordion %s %s %s %s", url, suffix, suffix, url);
     if (redis_reply == NULL) {
@@ -150,27 +173,4 @@ char *fetch_long_url(url_repo_t *repo, const char *accordion_url)
     freeReplyObject(redis_reply);
 
     return reply;
-}
-
-char *fetch_hostname()
-{
-    FILE *f = fopen("/etc/hostname", "r");
-    if (f == NULL) {
-        debug("unable to open /etc/hostname\n");
-        return NULL;
-    }
-
-    char *hostname = calloc(32, sizeof(*hostname));
-    if (hostname == NULL) {
-        debug("unable to allocate hostname memory\n");
-        fclose(f);
-        return NULL;
-    }
-
-    size_t n = fread(hostname, sizeof(*hostname), 32 - 1, f);
-    fclose(f);
-
-    hostname[n - 1] = '\0';
-
-    return hostname;
 }
