@@ -82,17 +82,19 @@ static enum MHD_Result get_response(struct MHD_Connection *connection, url_repo_
     debug("GET %s\n", url);
     
     struct MHD_Response *response = NULL;
+    int status_code = MHD_HTTP_INTERNAL_SERVER_ERROR;
     if (strcmp(url, "/") == 0) {
         response = create_entry_form_response();
+        status_code = MHD_HTTP_OK;
     } else if (is_accordion_url(url)) {
         response = create_long_url_response(repo, url);
+        status_code = MHD_HTTP_FOUND;
     } else {
         error("URL %s does not have a response handler for method GET\n", url);
         return MHD_NO;
     }
 
-    // TODO: http found might not be right here anymore
-    enum MHD_Result ret = MHD_queue_response(connection, MHD_HTTP_FOUND, response);
+    enum MHD_Result ret = MHD_queue_response(connection, status_code, response);
     MHD_destroy_response(response);
     
     return ret;
