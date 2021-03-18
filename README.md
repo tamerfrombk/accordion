@@ -4,6 +4,7 @@
 ### Dependencies
 
 * [libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/)
+* [hiredis](https://github.com/redis/hiredis)
 * [CMake](https://cmake.org/)
 
 ### Building
@@ -14,11 +15,24 @@ Once the dependencies above are installed on your system, run the following in t
 mkdir build
 cd build
 cmake -DCMAKE_BUILD_TYPE=release ..
-make
+cmake --build .
 ```
 
 This will build the `accordion` binary in the `build` directory.
 
 ### Running
 
-TODO
+By default, executing `accordion` will have it listen on port `8888`. To change this default port, start `accordion` with the port as an argument. e.g. `accordion 12345` will listen on port `12345`. `accordion` also requires an active `redis` connection on `localhost:6379`. At the moment, this is *not* configurable but perhaps a brave developer can put together a PR to add it in :) To quit `accordion`, simply press `Ctrl+D` in your terminal.
+
+When `accordion` is launched, you can browse to `<hostname>:<port>` on your browser and you'll be greeted with a (super) simple form to enter your URL that you wish to minify. Enter your URL and click `Submit`.
+
+![img](rsc/img/form.png)
+
+Once you submit, `accordion` will generate a minified URL (called the `accordion URL`) and return it to you in a beautiful page (let me know if you're hiring web designers ha):
+
+![img](rsc/img/accordion_url.png)
+
+Once you have this accordion URL, you can now navigate to it and `accordion` will redirect you back to the orginal URL you entered :) In this case, that's `DuckDuckGo`.
+
+
+
